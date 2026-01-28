@@ -23,11 +23,11 @@ Automates app password creation for mailboxes on `mail.cazehiresense.com`.
 
 ## Quick Start
 
-1. **Replace `emails.csv`** with your data (keep the same column format)
+1. **Replace `emails.csv`** with your data (keep the same column format). JUST EXPORT THE GOOGLE SHEET AS CSV FILE
 2. **Run the script:**
    ```powershell
    cd c:\Users\alexj\Downloads\Test\automation
-   node process_all_fixed.js
+   node ProcessAllCandidates.js
    ```
 3. **Results saved to:** `emails-results.csv`
 
@@ -59,13 +59,24 @@ Automates app password creation for mailboxes on `mail.cazehiresense.com`.
 
 ---
 
+## Files
+
+| File | Description |
+|------|-------------|
+| `ProcessAllCandidates.js` | Main script - processes all users in CSV |
+| `TestForSingleUser.js` | Debug script - opens visible browser for single user |
+| `emails.csv` | Input file - your mailbox data |
+| `emails-results.csv` | Output file - results with generated passwords |
+
+---
+
 ## Troubleshooting
 
 **Script stuck or crashed?**  
 Just re-run it - progress is saved and it will resume from where it left off.
 
 **Need to debug a single user?**  
-Edit credentials in `fix_user_visible.js` and run it - opens a visible browser window.
+Edit credentials in `TestForSingleUser.js` and run it - opens a visible browser window.
 
 **Login fails for a user?**  
 Check if the password in CSV is correct. The error will be logged in console.
