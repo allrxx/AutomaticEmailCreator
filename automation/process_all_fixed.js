@@ -4,14 +4,22 @@ const { parse } = require('csv-parse/sync');
 const { stringify } = require('csv-stringify/sync');
 const crypto = require('crypto');
 
-const csvPath = 'c:/Users/alexj/Downloads/Test/mailboxes_testing - mailboxes_testing.csv';
-const outPath = 'c:/Users/alexj/Downloads/Test/mailboxes_final.csv';
+const csvPath = 'c:/Users/alexj/Downloads/Test/emails.csv';
+const outPath = 'c:/Users/alexj/Downloads/Test/emails-results.csv';
+
+// Helper to check if app password is valid (our format ends with Aa1!)
+function hasValidAppPassword(password) {
+    if (!password || password.trim() === '') return false;
+    // Our generated passwords end with 'Aa1!'
+    return password.trim().endsWith('Aa1!');
+}
 
 (async () => {
     let records = [];
     try {
         const input = fs.readFileSync(csvPath);
-        records = parse(input, { columns: true, skip_empty_lines: true });
+        // Use tab delimiter since the file is tab-separated
+        records = parse(input, { columns: true, skip_empty_lines: true, delimiter: '\t' });
     } catch (e) {
         console.error('Failed to read CSV', e);
         process.exit(1);
@@ -23,10 +31,10 @@ const outPath = 'c:/Users/alexj/Downloads/Test/mailboxes_final.csv';
     if (fs.existsSync(outPath)) {
         try {
             const existing = fs.readFileSync(outPath);
-            const existingRecords = parse(existing, { columns: true, skip_empty_lines: true });
+            const existingRecords = parse(existing, { columns: true, skip_empty_lines: true, delimiter: '\t' });
             for (const rec of records) {
                 const found = existingRecords.find(r => r.email === rec.email);
-                if (found && found.app_password && found.app_password.length > 5) {
+                if (found && hasValidAppPassword(found.app_password)) {
                     rec.app_password = found.app_password;
                 }
             }
@@ -34,15 +42,29 @@ const outPath = 'c:/Users/alexj/Downloads/Test/mailboxes_final.csv';
         } catch (e) { console.log('Resume failed, starting clean'); }
     }
 
+    // Count how many need processing
+    const needProcessing = records.filter(r => !hasValidAppPassword(r.app_password)).length;
+    console.log(`${needProcessing} users need app passwords. ${records.length - needProcessing} already have valid passwords.`);
+
+    if (needProcessing === 0) {
+        console.log('All users already have valid app passwords. Nothing to do.');
+        process.exit(0);
+    }
+
     const browser = await chromium.launch({ headless: true });
 
+    let processed = 0;
     for (let i = 0; i < records.length; i++) {
         const record = records[i];
 
-        // Skip if already processed (need to verify on server too)
-        // For now, we'll reprocess to ensure correctness
+        // Skip if already has valid app password
+        if (hasValidAppPassword(record.app_password)) {
+            console.log(`[${i + 1}/${records.length}] Skipping ${record.email} - already has valid app password`);
+            continue;
+        }
 
-        console.log(`[${i + 1}/${records.length}] Processing ${record.email}...`);
+        processed++;
+        console.log(`[${i + 1}/${records.length}] Processing ${record.email}... (${processed}/${needProcessing})`);
         const context = await browser.newContext({ ignoreHTTPSErrors: true, viewport: { width: 1280, height: 720 } });
         const page = await context.newPage();
 
@@ -63,10 +85,10 @@ const outPath = 'c:/Users/alexj/Downloads/Test/mailboxes_final.csv';
             await page.click('text=App passwords');
             await page.waitForTimeout(1000);
 
-            // Check if password already exists
+            // Check if password already exists on server
             const tableContent = await page.locator('#AppPasswds').innerText();
             if (tableContent.includes('hiresense')) {
-                console.log(`  Already has app password. Skipping.`);
+                console.log(`  Already has app password on server. Skipping.`);
                 await context.close();
                 continue;
             }
@@ -111,8 +133,8 @@ const outPath = 'c:/Users/alexj/Downloads/Test/mailboxes_final.csv';
             record.app_password = newPass;
             console.log(`  Success: ${newPass}`);
 
-            // Save progress
-            const currentOutput = stringify(records, { header: true });
+            // Save progress (with tab delimiter to match input)
+            const currentOutput = stringify(records, { header: true, delimiter: '\t' });
             fs.writeFileSync(outPath, currentOutput);
 
         } catch (e) {
