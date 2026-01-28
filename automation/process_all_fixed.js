@@ -7,19 +7,28 @@ const crypto = require('crypto');
 const csvPath = 'c:/Users/alexj/Downloads/Test/emails.csv';
 const outPath = 'c:/Users/alexj/Downloads/Test/emails-results.csv';
 
-// Helper to check if app password is valid (our format ends with Aa1!)
-function hasValidAppPassword(password) {
-    if (!password || password.trim() === '') return false;
-    // Our generated passwords end with 'Aa1!'
-    return password.trim().endsWith('Aa1!');
+// Helper to check if app password cell has a value
+function hasAppPassword(password) {
+    return password && password.trim() !== '';
 }
+
+// Auto-detect delimiter (tab or comma)
+function detectDelimiter(content) {
+    const firstLine = content.split('\n')[0];
+    const tabCount = (firstLine.match(/\t/g) || []).length;
+    const commaCount = (firstLine.match(/,/g) || []).length;
+    return tabCount > commaCount ? '\t' : ',';
+}
+
+let detectedDelimiter = ',';
 
 (async () => {
     let records = [];
     try {
-        const input = fs.readFileSync(csvPath);
-        // Use tab delimiter since the file is tab-separated
-        records = parse(input, { columns: true, skip_empty_lines: true, delimiter: '\t' });
+        const input = fs.readFileSync(csvPath, 'utf-8');
+        detectedDelimiter = detectDelimiter(input);
+        console.log(`Detected delimiter: ${detectedDelimiter === '\t' ? 'TAB' : 'COMMA'}`);
+        records = parse(input, { columns: true, skip_empty_lines: true, delimiter: detectedDelimiter });
     } catch (e) {
         console.error('Failed to read CSV', e);
         process.exit(1);
@@ -31,10 +40,10 @@ function hasValidAppPassword(password) {
     if (fs.existsSync(outPath)) {
         try {
             const existing = fs.readFileSync(outPath);
-            const existingRecords = parse(existing, { columns: true, skip_empty_lines: true, delimiter: '\t' });
+            const existingRecords = parse(existing, { columns: true, skip_empty_lines: true, delimiter: detectedDelimiter });
             for (const rec of records) {
                 const found = existingRecords.find(r => r.email === rec.email);
-                if (found && hasValidAppPassword(found.app_password)) {
+                if (found && hasAppPassword(found.app_password)) {
                     rec.app_password = found.app_password;
                 }
             }
@@ -43,7 +52,7 @@ function hasValidAppPassword(password) {
     }
 
     // Count how many need processing
-    const needProcessing = records.filter(r => !hasValidAppPassword(r.app_password)).length;
+    const needProcessing = records.filter(r => !hasAppPassword(r.app_password)).length;
     console.log(`${needProcessing} users need app passwords. ${records.length - needProcessing} already have valid passwords.`);
 
     if (needProcessing === 0) {
@@ -58,7 +67,7 @@ function hasValidAppPassword(password) {
         const record = records[i];
 
         // Skip if already has valid app password
-        if (hasValidAppPassword(record.app_password)) {
+        if (hasAppPassword(record.app_password)) {
             console.log(`[${i + 1}/${records.length}] Skipping ${record.email} - already has valid app password`);
             continue;
         }
@@ -133,8 +142,8 @@ function hasValidAppPassword(password) {
             record.app_password = newPass;
             console.log(`  Success: ${newPass}`);
 
-            // Save progress (with tab delimiter to match input)
-            const currentOutput = stringify(records, { header: true, delimiter: '\t' });
+            // Save progress (using same delimiter as input)
+            const currentOutput = stringify(records, { header: true, delimiter: detectedDelimiter });
             fs.writeFileSync(outPath, currentOutput);
 
         } catch (e) {
