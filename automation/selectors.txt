@@ -1,0 +1,18 @@
+INPUTS:
+<input type="hidden" name="logout">
+<input type="hidden" value="b78959356e4a42690fcd74d999e5453d07b185d7f64336af1c74f2bd794f15e7" name="csrf_token">
+<input class="form-check-input ms-2" type="checkbox" id="dark-mode-toggle">
+<input name="login_user" autocorrect="off" autocapitalize="none" type="text" id="login_user" class="form-control" placeholder="Email address" required="" autofocus="" autocomplete="username">
+<input name="pass_user" type="password" id="pass_user" class="form-control" placeholder="Password" required="" autocomplete="current-password">
+<input type="hidden" value="b78959356e4a42690fcd74d999e5453d07b185d7f64336af1c74f2bd794f15e7" name="csrf_token">
+<input type="hidden" value="b78959356e4a42690fcd74d999e5453d07b185d7f64336af1c74f2bd794f15e7">
+
+BUTTONS:
+<button type="button" class="text-secondary btn p-0 border-0 bg-transparent ms-auto dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <span class="flag-icon flag-icon-gb"></span>
+          </button>
+<button type="submit" class="btn btn-xs-lg btn-success w-100 mt-2 mx-auto" style="max-width: 400px;" value="Login">Login</button>
+<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<button class="btn btn-sm btn-xs-half d-block d-sm-inline btn-danger" id="IsConfirmed">Delete now</button>
+<button class="btn btn-sm btn-xs-half d-block d-sm-inline btn-secondary" id="isCanceled">Cancel</button>
+<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
